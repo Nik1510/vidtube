@@ -12,4 +12,7 @@ yarn-error.log*
 
 # Ignore package-lock and yarn lock files (optional)
 package-lock.json
+package.json
+prettierignore
+prettierrc
 yarn.lock
