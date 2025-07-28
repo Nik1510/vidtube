@@ -4,11 +4,9 @@ import morgan from "morgan";
 import {app} from "./app.js"
 import connectDB from './db/index.js';
 
-
 dotenv.config({
   path:"./.env"
 })
-
 
 const morganFormat = ":method :url :status :response-time ms";
 
@@ -32,10 +30,11 @@ const port = process.env.PORT || 9000;
 
 connectDB()
 .then(()=>{
-  console.log(`Server is running on port ${port}`);
-  
+  // Actually start the server after DB connection is successful
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
 })
 .catch((err)=>{
   console.log(`MongoDB connection error ${err}`);
-  
 })
