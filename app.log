@@ -31,3 +31,6 @@
 {"level":"\u001b[32minfo\u001b[39m","message":"Hello logger installed","timestamp":"2025-07-26T20:12:14.460Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"Hello logger installed","timestamp":"2025-07-26T20:12:34.002Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"Hello logger installed","timestamp":"2025-07-26T20:12:44.524Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/users\",\"status\":\"404\",\"responseTime\":\"4.400\"}","timestamp":"2025-07-31T20:12:13.399Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/register\",\"status\":\"404\",\"responseTime\":\"0.903\"}","timestamp":"2025-07-31T20:12:43.975Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/register\",\"status\":\"404\",\"responseTime\":\"0.295\"}","timestamp":"2025-07-31T20:13:15.294Z"}
