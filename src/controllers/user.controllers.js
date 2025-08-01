@@ -5,6 +5,27 @@ import {uploadOnCloudinary ,deleteFromCloudinary} from '../utils/cloudinary.js'
 import {ApiResponse} from '../utils/ApiResponse.js'
 
 
+
+const generateAccessAndRefreshToken = async (userId)=>{
+    // this is helper method
+    try {
+        const user =User.findById(userId);
+        if(!user){
+            throw new ApiError(404,"Unable to find the userId in generateAccessAndRefreshToken method");
+        }
+    
+        // these are brought from user.model.js
+        const accessToken = user.generateAccessToken();
+        const refreshToken= user.generateRefreshToken();
+        // -----------------------------------------
+        user.refreshToken = refreshToken
+        await user.save({validateBeforeSave:false})
+        return {accessToken,refreshToken};
+    } catch (error) {
+        throw new ApiError(500,"Something went wrong while generating access and refresh token")
+    }
+}
+
 const registerUser = asyncHandler(async (req,res)=>{
     console.info("hit the register User")
     const {fullname, email,username, password} = req.body;
@@ -33,7 +54,7 @@ const registerUser = asyncHandler(async (req,res)=>{
     })
 
     if (excitedUser) {
-        throw new ApiError('409',"User will email or username already exists")
+        throw new ApiError(400,"User will email or username already exists")
     }
 
     // now we have to handle images
@@ -95,11 +116,12 @@ const registerUser = asyncHandler(async (req,res)=>{
     }
     return res
             .status(201)
-            .json(new ApiResponse(201),createdUser,"User registed user");
+            .json(new ApiResponse(201,createdUser,"User registed user"));
         
     } catch (error) {
         console.log("User creation failed",error)
         
+        throw new ApiError(500,"Something went wrong");
     }
 
         if (avatar) {
@@ -109,9 +131,70 @@ const registerUser = asyncHandler(async (req,res)=>{
             await deleteFromCloudinary(coverImage.public_id)
         }
 
-        throw new ApiError(500,"Something went wrong");
+})
+
+const loginUser = asyncHandler(async(req,res)=>{
+
+    // plan a what to do
+
+    // 1.) get data from the body
+
+    const {email,username,password}=req.body;
+
+    // validation
+    if (!email) {
+        throw new ApiError(400,"Email is required")
+    }
+    if (!password) {
+        throw new ApiError(400,"password is required")
+    }
+    if(!username){
+        throw new ApiError(400,"Password is required")
+    }
+
+    // check for the user 
+
+    const user = await User.findOne(
+        {
+            $or:[{username},{email}]
+        }
+    )
+    if(!user){
+        throw new ApiError(404,"User not found")
+    }
+
+    // validate password
+    // used from user.model.js
+    const isPasswordValid = await user.isPasswordCorrect(password);
+
+    if (!isPasswordValid) {
+        throw new ApiError(401,"Invalid credentails")
+    }
+
+    const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user._id)
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+    // now i will get the user object which doesnot have password and refreshToken feild
+
+    if(!loggedInUser){
+        throw new ApiError(404,"Unable to logged in User")
+    }
+    const options ={
+        httpOnly:true,
+        secure:process.env.NODE_ENV ==="production",
+    }
+    return res
+              .status(200)
+              .cookie("accessToken",accessToken.options)
+              .cookie("refreshToken",refreshToken,options)
+              .json(new ApiResponse(200,
+                {user:loggedInUser,accessToken,refreshToken},
+                "User logged in successfully"
+              ))
 })
 
 export  {
-    registerUser
+    registerUser,
+    loginUser
 };
