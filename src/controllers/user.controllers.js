@@ -245,6 +245,12 @@ const refreshAcessToken = asyncHandler(async(req,res)=>{
     }
 })
 
+const logoutUser = asyncHandler(async(req,res)=>{
+    await User.findByIdAndUpdate(
+        // TODO:- need to come back here after the middleware
+    )
+})
+
 export  {
     registerUser,
     loginUser,
