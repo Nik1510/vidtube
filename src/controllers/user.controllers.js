@@ -3,6 +3,7 @@ import {ApiError} from '../utils/ApiError.js'
 import {User} from '../models/user.models.js'
 import {uploadOnCloudinary ,deleteFromCloudinary} from '../utils/cloudinary.js'
 import {ApiResponse} from '../utils/ApiResponse.js'
+import { jwt } from 'jsonwebtoken'
 
 
 
@@ -194,7 +195,58 @@ const loginUser = asyncHandler(async(req,res)=>{
               ))
 })
 
+
+
+const refreshAcessToken = asyncHandler(async(req,res)=>{
+    
+    // taking incoming refresh token from the web or mobile
+    // for web => can be accessed throught cookies which i have set in midddleware in app.js
+
+    // for mobile => we take access throught body
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+    if (!incomingRefreshToken) {
+        throw new ApiError(401,"Refresh toke is required");
+    }
+
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+        const user = await User.findById(decodedToken?._id)
+
+        if(!user){
+            throw new ApiError(401,"Invalid refresh Token")
+        }
+
+        if (user.incomingRefreshToken!== user?.refreshToken) {
+            throw new ApiError(401,"Invalid refresh Token")
+        }
+
+        const options ={
+            httpOnly:true,
+            secure:process.env.NODE_ENV ==="production",
+        }
+
+        const {accessToken ,refreshToken:newRefreshToken}= await generateAccessAndRefreshToken(user._id)
+
+        return res
+            .status(200)
+            .cookie("accessToken",accessToken,options)
+            .cookie("refresToken",newRefreshToken,options)
+            .json(
+                new ApiResponse(200,
+                    {accessToken,refreshToken:newRefreshToken}
+                    ,"Access token refreshed successfully"
+                ));
+    } catch (error) {
+        throw new ApiError(500,"Something went wrong while refreshing access Token")
+    }
+})
+
 export  {
     registerUser,
-    loginUser
+    loginUser,
+    refreshAcessToken
 };
