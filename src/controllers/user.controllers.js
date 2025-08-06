@@ -3,7 +3,7 @@ import {ApiError} from '../utils/ApiError.js'
 import {User} from '../models/user.models.js'
 import {uploadOnCloudinary ,deleteFromCloudinary} from '../utils/cloudinary.js'
 import {ApiResponse} from '../utils/ApiResponse.js'
-import { jwt } from 'jsonwebtoken'
+import  jwt  from 'jsonwebtoken'
 import mongoose from 'mongoose'
 
 
@@ -11,7 +11,7 @@ import mongoose from 'mongoose'
 const generateAccessAndRefreshToken = async (userId)=>{
     // this is helper method
     try {
-        const user =User.findById(userId);
+        const user =await User.findById(userId);
         if(!user){
             throw new ApiError(404,"Unable to find the userId in generateAccessAndRefreshToken method");
         }
@@ -29,7 +29,16 @@ const generateAccessAndRefreshToken = async (userId)=>{
 }
 
 const registerUser = asyncHandler(async (req,res)=>{
-    console.info("hit the register User")
+    // console.info("hit the register User")
+
+    // // 🔍 Add comprehensive debugging
+    // console.log('=== REQUEST DEBUG INFO ===');
+    // console.log('Content-Type:', req.get('Content-Type'));
+    // console.log('Request method:', req.method);
+    // console.log('Request body:', req.body);
+    // console.log('Request files:', req.files);
+    // console.log('Request headers:', req.headers);
+    // console.log('========================');
     const {fullname, email,username, password} = req.body;
     
     
@@ -116,6 +125,13 @@ const registerUser = asyncHandler(async (req,res)=>{
     if(!createdUser){
         throw new ApiError(500,"Something wrong while registring the user")
     }
+    if (avatar) {
+            await deleteFromCloudinary(avatar.public_id)
+        }
+        if (coverImage) {
+            await deleteFromCloudinary(coverImage.public_id)
+        }
+    
     return res
             .status(201)
             .json(new ApiResponse(201,createdUser,"User registed user"));
@@ -126,33 +142,49 @@ const registerUser = asyncHandler(async (req,res)=>{
         throw new ApiError(500,"Something went wrong");
     }
 
-        if (avatar) {
-            await deleteFromCloudinary(avatar.public_id)
-        }
-        if (coverImage) {
-            await deleteFromCloudinary(coverImage.public_id)
-        }
+        
 
 })
 
 const loginUser = asyncHandler(async(req,res)=>{
+    // to test this 
+    // Select "raw" instead of "form-data"
 
+    // Change dropdown from "Text" to "JSON"
+
+    // Enter the JSON data as shown above
+
+    // Send the request 
+    console.log("hit login user")
+    console.log('=== LOGIN DEBUG ===');
+    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('req.body:', req.body);
+    console.log('req.headers:', req.headers);
+    console.log('==================');
     // plan a what to do
 
     // 1.) get data from the body
 
     const {email,username,password}=req.body;
 
+    console.log('=== AFTER DESTRUCTURING ===');
+    console.log('email:', email);
+    console.log('username:', username); 
+    console.log('password:', password);
+    console.log('password type:', typeof password);
+    console.log('password truthy:', !!password);
+    console.log('========================');
+
     // validation
-    if (!email) {
-        throw new ApiError(400,"Email is required")
+    if (!email && !username) {
+        throw new ApiError(400, "Email or username is required");
     }
     if (!password) {
         throw new ApiError(400,"password is required")
     }
-    if(!username){
-        throw new ApiError(400,"Password is required")
-    }
+    // if(!username){
+    //     throw new ApiError(400,"username is required")
+    // }
 
     // check for the user 
 
@@ -188,7 +220,7 @@ const loginUser = asyncHandler(async(req,res)=>{
     }
     return res
               .status(200)
-              .cookie("accessToken",accessToken.options)
+              .cookie("accessToken",accessToken,options)
               .cookie("refreshToken",refreshToken,options)
               .json(new ApiResponse(200,
                 {user:loggedInUser,accessToken,refreshToken},
@@ -247,6 +279,8 @@ const refreshAcessToken = asyncHandler(async(req,res)=>{
 })
 
 const logoutUser = asyncHandler(async(req,res)=>{
+    console.log("In logout controller");
+    
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -270,6 +304,7 @@ const logoutUser = asyncHandler(async(req,res)=>{
 })
 
 const changeCurrentPassword = asyncHandler(async(req,res)=>{
+    console.warn("body",req.body)
     const {oldPassword,newPassword} =req.body;
     const user = await User.findById(req.user?._id);
     
@@ -288,6 +323,7 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
 const getCurrentUser = asyncHandler(async(req,res)=>{
     return res.status(200).json(new ApiResponse(200,req.user,"Current user details"))
 })
+
 const updateAccountDetails = asyncHandler(async(req,res)=>{
     const {fullname,email} = req.body;
 
@@ -295,7 +331,7 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
         throw new ApiError(400,"Full and email are required")
     }
 
-    User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -307,6 +343,7 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
     ).select("-password -refreshToken")
     return res.status(200).json(new ApiResponse(200,user,"Account details updated successfully"))
 })
+
 const updateUserAvatar = asyncHandler(async(req,res)=>{
     // access the local avatar file
     const avatarLocalPath = req.file?.path
@@ -363,7 +400,7 @@ const updateUserCoverImage = asyncHandler(async(req,res)=>{
 
 const getUserChannelProfile = asyncHandler(async(req,res)=>{
     //  params is used when you have to grab something from url 
-    const {username} = req.parmas
+    const {username} = req.params
 
     if(!username.trim()){
         throw new ApiError(400,"Username is required")
@@ -390,7 +427,7 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
                     from:"subscriptions",
                     localField:"_id",
                     foreignField:"subscriber",
-                    as:"subscriberedTo"
+                    as:"subscribedTo"
                 }
             },{
                 $addFields:{
@@ -403,10 +440,7 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
                     isSubscribed:{
                         $cond:{
                             if:{
-                                $in:[
-                                    req.user?._id,"$subscribers",
-                                    "subscriber"
-                                ]
+                                $in: [req.user?._id, "$subscribers.subscriber"]
                             },
                             then:true,
                             else:false
@@ -444,7 +478,7 @@ const getWatchHistory =asyncHandler(async(req,res)=>{
     const user = await User.aggregate([
         {
             $match:{
-                _id:new mongoose.Types.ObjectId(String(res.user?._id))
+                _id:new mongoose.Types.ObjectId(String(req.user?._id))
             }
         },{
             $lookup:{
