@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {registerUser,logoutUser} from '../controllers/user.controllers.js'
+import {registerUser,logoutUser, loginUser, refreshAcessToken, changeCurrentPassword, getCurrentUser, getUserChannelProfile, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getWatchHistory} from '../controllers/user.controllers.js'
 
 import {upload} from '../middleware/multer.middleware.js'
 
@@ -9,6 +9,7 @@ console.info("enterd the user.routes")
 const router = Router();
 
 // here we have to post the request
+// unsecured routes
 router.route("/register").post(
     upload.fields([
         {
@@ -21,8 +22,24 @@ router.route("/register").post(
     ])
     ,registerUser)
 
-// secured routes
+router.route("/login").post(loginUser)
+router.route("/refresh-token").post(refreshAcessToken)
 
+// secured routes
 router.route("/logout").post(verifyJWT,logoutUser)
+
+router.route("/change-password").post(verifyJWT,changeCurrentPassword)
+
+router.route("/current-user").get(verifyJWT,getCurrentUser)
+
+router.route("/c/:username").get(verifyJWT,getUserChannelProfile)
+
+router.route("/update-account").patch(verifyJWT,updateAccountDetails)
+
+router.route("/avatar").patch(verifyJWT,upload.single("avatar"),updateUserAvatar)
+
+router.route("/cover-image").patch(verifyJWT,upload.single("coverImage"),updateUserCoverImage)
+
+router.route("/histroy").get(verifyJWT,getWatchHistory)
 
 export default router;
