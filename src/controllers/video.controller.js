@@ -6,7 +6,6 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import fs from 'fs'
-import { title } from "process"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -181,6 +180,88 @@ const publishAVideo = asyncHandler(async (req, res) => {
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
+
+    // validation videoId
+    if(!videoId){
+        throw new ApiError(400,"Video Id is required")
+    }
+
+    // check if videoId is a valid Object Id
+    if(!mongoose.Types.ObjectId.isValid(videoId)){
+        throw new ApiError(400,"Invalid video ID format")
+    }
+
+    try {
+        // Use aggregation pipeline to get video with owner details
+        const video = await Video.aggregate([
+            {
+                $match:{
+                    _id:new mongoose.Types.ObjectId(String(videoId)),
+                    isPublished:true // Only show published videos
+                }
+            },
+            {
+                $lookup:{
+                    from:'users',
+                    localField:'owner',
+                    foreignField:'_id',
+                    as:'ownerDetails',
+                    pipeline:[
+                        {
+                            $project:{
+                                username:1,
+                                fullname:1,
+                                avatar:1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $unwind:'$ownerDetails'
+                // Converts ownerDetails: [userObject] → ownerDetails: userObject
+            },
+            {
+                $addFields:{
+                    owner:'$ownerDetails'
+                }
+            },
+            {
+                $project:{
+                    videoFile:1,
+                    thumbnail:1,
+                    title:1,
+                    description:1,
+                    duration:1,
+                    views:1,
+                    createdAt:1,
+                    updatedAt:1,
+                    owner:1
+                }
+            }
+        ]);
+
+        // Check if video exists
+
+        if(!video || video.length===0){
+            throw new ApiError(404,"Video not found or not published")
+        }
+
+        // Increment view count 
+        await Video.findByIdAndUpdate(
+            videoId,
+            {$inc:{views:1}},
+            {new :true}
+        );
+
+        return res
+                .status(200)
+                .json(new ApiResponse(200,video[0],"Video fetched successfully"))
+
+    } catch (error) {
+        throw new ApiError(500,`Failed to fetch video:${error.message}`)
+    }
+
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
