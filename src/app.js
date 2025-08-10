@@ -24,13 +24,14 @@ app.use(cookieParser());
 import healthcheckRouter from './routes/healthcheck.routes.js'
 import userRouter from './routes/user.routes.js'
 import { errorHandler } from "./middleware/error.middleware.js";
-
+import videoRouter from './routes/video.routes.js'
 // routes
 
 app.use("/api/v1/healthcheck",healthcheckRouter)
 console.info("in app.js going to hit userRoutes");
 app.use("/api/v1/users",userRouter)
-
+app.use("/api/v1/videos", videoRouter)
 app.use(errorHandler)
+
 
 export {app};

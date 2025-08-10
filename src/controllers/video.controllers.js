@@ -1,6 +1,6 @@
 import mongoose, {isValidObjectId} from "mongoose"
-import {Video} from "../models/video.model.js"
-import {User} from "../models/user.model.js"
+import { Video } from "../models/video.models.js"
+import {User} from '../models/user.models.js'
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
@@ -134,48 +134,62 @@ const getAllVideos = asyncHandler(async (req, res) => {
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
-    const { title, description} = req.body
-    // TODO: get video, upload to cloudinary, create video
+    const { title, description } = req.body;
+    
+    
     if(!title){
-        throw new ApiError(404,"Need title for the video");
+        throw new ApiError(400,"Title is required");
     }
     if (!description) {
-        throw new ApiError(404,"Need description for the video")
+        throw new ApiError(400,"Description is required");
     }
 
-    if(!req.file || !req.file.path){
+    if(!req.files || !req.files.video || !req.files.video[0]){
         throw new ApiError(400,"Video file is required");
     }
 
-    try {
-        const videoUpload = await uploadOnCloudinary(req.file.path)  
+    const videoFile = req.files.video[0];
+    const thumbnailFile = req.files.thumbnail ? req.files.thumbnail[0] : null;
 
-        if (!videoUpload) {
-            throw new ApiError(400,"Failed to upload to Cloudinary")
-        }
-
-        // now i have to create record in the database
-        const video = await Video.create({
-            title,
-            description,
-            videoFile:videoUpload.secure_url,
-            thumbnail:videoUpload.secure_url,
-            duration:videoUpload.duration || 0,
-            cloudinaryVideoId:videoUpload.public_id,
-            owner:req.user?._id
-        });
-        return res.
-                   status(201)
-                   .json(new ApiResponse(201,video,"Video published successfully"));
-
-    } catch (error) {
-        if(req.file.path && fs.existsSync(req.file.path)){
-            fs.unlinkSync(req.file.path)
-        }
-        throw new ApiError(500,`Failed to publish video ${error.message}`)
-    }
+ 
+    const videoUpload = await uploadOnCloudinary(videoFile.path);
     
-})
+    if (!videoUpload) {
+        throw new ApiError(400,"Failed to upload video to Cloudinary");
+    }
+
+    // Upload thumbnail if provided
+    let thumbnailUpload = null;
+    if (thumbnailFile) {
+        thumbnailUpload = await uploadOnCloudinary(thumbnailFile.path);
+    }
+
+    const video = await Video.create({
+        title,
+        description,
+        videoFile: videoUpload.secure_url,
+        thumbnail: thumbnailUpload?.secure_url || videoUpload.secure_url,
+        duration: videoUpload.duration || 0,
+        owner: req.user?._id
+    });
+
+    try {
+        if (videoFile.path && fs.existsSync(videoFile.path)) {
+            fs.unlinkSync(videoFile.path);
+        }
+        if (thumbnailFile?.path && fs.existsSync(thumbnailFile.path)) {
+            fs.unlinkSync(thumbnailFile.path);
+        }
+    } catch (cleanupError) {
+        console.error('Error cleaning up files:', cleanupError);
+        // Don't throw error for cleanup failure
+    }
+
+    return res
+        .status(201)
+        .json(new ApiResponse(201, video, "Video published successfully"));
+});
+
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params

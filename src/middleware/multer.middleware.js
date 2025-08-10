@@ -30,11 +30,14 @@ export const upload = multer({
     },
     fileFilter: (req, file, cb) => {
         // Optional: Add file type validation
-        const allowedTypes = /jpeg|jpg|png|gif/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
+        const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
+        const allowedVideoTypes = /mp4|avi|mov|wmv|flv|webm|mkv/;
         
-        if (mimetype && extname) {
+        const fileExtension = path.extname(file.originalname).toLowerCase();
+        const isImage = allowedImageTypes.test(fileExtension) && file.mimetype.startsWith('image/');
+        const isVideo = allowedVideoTypes.test(fileExtension) && file.mimetype.startsWith('video/');
+        
+        if (isImage || isVideo) {
             return cb(null, true);
         } else {
             cb(new Error('Only image files (JPEG, JPG, PNG, GIF) are allowed'));

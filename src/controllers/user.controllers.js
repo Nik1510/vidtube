@@ -31,14 +31,14 @@ const generateAccessAndRefreshToken = async (userId)=>{
 const registerUser = asyncHandler(async (req,res)=>{
     // console.info("hit the register User")
 
-    // // 🔍 Add comprehensive debugging
-    // console.log('=== REQUEST DEBUG INFO ===');
-    // console.log('Content-Type:', req.get('Content-Type'));
-    // console.log('Request method:', req.method);
-    // console.log('Request body:', req.body);
-    // console.log('Request files:', req.files);
-    // console.log('Request headers:', req.headers);
-    // console.log('========================');
+    // 🔍 Add comprehensive debugging
+    console.log('=== REQUEST DEBUG INFO ===');
+    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('Request method:', req.method);
+    console.log('Request body:', req.body);
+    console.log('Request files:', req.files);
+    console.log('Request headers:', req.headers);
+    console.log('========================');
     const {fullname, email,username, password} = req.body;
     
     
