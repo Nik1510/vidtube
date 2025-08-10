@@ -267,16 +267,110 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
+    const {title,description,thumbnail} = req.body;
+
+    if(!videoId){
+        throw new ApiError(400,'Video Id is required');
+    }
+
+    if(!mongoose.Types.ObjectId.isValid(videoId)){
+       throw new ApiError(400,'Invalid video ID format');
+    }
+
+    if(!title && !description && !thumbnail){
+        throw new ApiError(400,'At least one field (title, description, or thumbnail) is required for update')
+    }
+
+    // Build update object dynamically 
+    const updateFeilds = {};
+    if (title) {
+        updateFeilds.title = title;
+    }
+    if (description) {
+        updateFeilds.description=description;
+    }
+    if (thumbnail) {
+        updateFeilds.thumbnail=thumbnail;
+    }
+
+    // now i will set to update the data 
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {$set:updateFeilds},
+        {
+            new:true, // Return the modified document rather than the original 
+            runValidators: true // Ensure scehma validation is applied during the update
+        }
+    );
+
+    if (!updatedVideo) {
+        throw new ApiError(404,'Video not found');
+    }
+   
+    return res
+    .status(200)
+    .json(new ApiResponse(200,updatedVideo,"Video updated successfully"))
 
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
+    if(!videoId){
+        throw new ApiError(400,"Video ID is required");
+    }
+
+    if(!mongoose.Types.ObjectId.isValid(videoId)){
+        throw new ApiError(400,"Invalid video ID format");
+    }
+
+    const deletedVideo = await Video.findByIdAndDelete(
+        videoId
+    )
+    if(!deletedVideo){
+         throw new ApiError(404,"Video not found or already deleted");
+    }
+    return res
+    .status(200)
+    .json(new ApiResponse(200,deleteVideo,"Video deleted Successfully"))
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    // validation 
+    if (!videoId) {
+        throw new ApiError(400,"Video Id is required");
+    }
+
+    // validation in moongoose
+    if(!mongoose.Types.ObjectId.isValid(videoId)){
+        throw new ApiError(400,"Invalid Video ID format")
+    }
+
+    // First get the current video to check its current publish status 
+    const currentVideo = await Video.findById(videoId);
+
+    if (!currentVideo) {
+        throw new ApiError(404,"Video not found")
+    }
+
+    // Toggle the isPublished status
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {$set:{
+            isPublished:!currentVideo.isPublished
+        }},
+        {
+            new:true,
+            runValidators:true
+        }
+    );
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,updatedVideo,`Video ${updatedVideo.isPublished? 'published':'unpublished'} successfully`))
+
 })
 
 export {
