@@ -282,21 +282,21 @@ const updateVideo = asyncHandler(async (req, res) => {
     }
 
     // Build update object dynamically 
-    const updateFeilds = {};
+    const updateFields = {};
     if (title) {
-        updateFeilds.title = title;
+        updateFields.title = title;
     }
     if (description) {
-        updateFeilds.description=description;
+        updateFields.description=description;
     }
     if (thumbnail) {
-        updateFeilds.thumbnail=thumbnail;
+        updateFields.thumbnail=thumbnail;
     }
 
     // now i will set to update the data 
     const updatedVideo = await Video.findByIdAndUpdate(
         videoId,
-        {$set:updateFeilds},
+        {$set:updateFields},
         {
             new:true, // Return the modified document rather than the original 
             runValidators: true // Ensure scehma validation is applied during the update
@@ -332,7 +332,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     }
     return res
     .status(200)
-    .json(new ApiResponse(200,deleteVideo,"Video deleted Successfully"))
+    .json(new ApiResponse(200,deletedVideo,"Video deleted Successfully"))
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
